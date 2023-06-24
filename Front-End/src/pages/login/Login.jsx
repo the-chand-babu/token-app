@@ -2,69 +2,80 @@ import React, { useState } from "react";
 import style from "./Login.module.css";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
-import { auth } from "./firebase.config";
+import firebase from "./firebase.config";
 import OtpInput from "otp-input-react";
-import { toast } from "react-toastify";
-
-
-import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
-console.log(auth);
 
 function Login() {
   const [phone, setPhone] = useState("");
-const [otp,setOtp] = useState('')
-  const [showOTP, setShowOTP] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [showOTP, setShowOTP] = useState(true);
+  const [toast, setToast] = useState(false);
 
-  function onCaptchVerify() {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(
-        "recaptcha-container",
-        {
-          size: "invisible",
-          callback: (response) => {
-            onSignup();
-          },
-          "expired-callback": () => {},
+  const configureCaptcha = () => {
+    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(
+      "sign-in-button",
+      {
+        size: "invisible",
+        callback: (response) => {
+          onSignInSubmit();
+          console.log("Recaptca varified");
         },
+        defaultCountry: "IN",
+      }
+    );
+  };
 
-        auth
-      );
-    }
-  }
-
-  function onSignup() {
-    onCaptchVerify();
-    alert(phone);
+  const handleClick = () => {
+    configureCaptcha();
+    const phoneNumber = "+" + phone;
+    console.log(phoneNumber);
     const appVerifier = window.recaptchaVerifier;
-
-    const formatPh = "+" + phone;
-
-    signInWithPhoneNumber(auth, formatPh, appVerifier)
+    firebase
+      .auth()
+      .signInWithPhoneNumber(phoneNumber, appVerifier)
       .then((confirmationResult) => {
         window.confirmationResult = confirmationResult;
-
+        console.log("OTP has been sent");
         setShowOTP(true);
-        toast.success("OTP sended successfully!");
       })
       .catch((error) => {
-        console.log(error);
+        console.log("SMS not sent");
       });
-  }
+  };
+
+  const handleOtpSubmit = () => {
+    const code = otp;
+    console.log(code);
+    window.confirmationResult
+      .confirm(code)
+      .then((result) => {
+        const user = result.user;
+        console.log(JSON.stringify(user));
+
+        setShowOTP(false);
+      })
+      .catch((error) => {});
+  };
 
   return (
     <>
+      <h1>Login</h1>
       {showOTP ? (
-        <OtpInput
-          value={otp}
-          onChange={setOtp}
-          OTPLength={6}
-          otpType="number"
-          disabled={false}
-          autoFocus
-          className="opt-container "
-        ></OtpInput>
+        <div className={style.otp}>
+          <OtpInput
+            value={otp}
+            onChange={setOtp}
+            OTPLength={6}
+            otpType="number"
+            disabled={false}
+            autoFocus
+            className="opt-container"
+          ></OtpInput>
+          <button onClick={handleOtpSubmit}>submit otp</button>
+        </div>
       ) : (
         <div className={style.login}>
+          <div id="sign-in-button"></div>
           <PhoneInput
             country={"in"}
             value={phone}
@@ -72,7 +83,7 @@ const [otp,setOtp] = useState('')
             inputStyle={{ width: "80%" }}
             containerStyle={{ marginLeft: "30px" }}
           />
-          <button onClick={onSignup}>Login</button>
+          <button onClick={handleClick}>Login</button>
         </div>
       )}
     </>
