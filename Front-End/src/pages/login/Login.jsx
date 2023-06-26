@@ -4,12 +4,29 @@ import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import firebase from "./firebase.config";
 import OtpInput from "otp-input-react";
-
+import toast, { Toaster } from "react-hot-toast";
+import {useNavigate} from 'react-router-dom'
 function Login() {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [showOTP, setShowOTP] = useState(true);
-  const [toast, setToast] = useState(false);
+  const [showOTP, setShowOTP] = useState(false);
+const navigate = useNavigate();
+
+  async function checkout(){
+    const newPhone = phone.slice(2);
+    let res = await fetch(`http://localhost:4200/user/${newPhone}`);
+    console.log(res)
+   
+  if(res.status== 409 ){
+      navigate('/dashboard')
+  }
+
+  if(res.status== 404){
+    navigate('/register')
+  }
+   }
+  
+   
 
   const configureCaptcha = () => {
     window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(
@@ -36,12 +53,17 @@ function Login() {
       .then((confirmationResult) => {
         window.confirmationResult = confirmationResult;
         console.log("OTP has been sent");
+        toast.success("OTP has been sent")
         setShowOTP(true);
       })
       .catch((error) => {
         console.log("SMS not sent");
+        toast.error("OTP has not been sent")
       });
   };
+
+ 
+
 
   const handleOtpSubmit = () => {
     const code = otp;
@@ -51,8 +73,9 @@ function Login() {
       .then((result) => {
         const user = result.user;
         console.log(JSON.stringify(user));
-
-        setShowOTP(false);
+        toast.success('verified succesfully')
+          checkout()
+        // setShowOTP(false);
       })
       .catch((error) => {});
   };
@@ -86,6 +109,7 @@ function Login() {
           <button onClick={handleClick}>Login</button>
         </div>
       )}
+      <Toaster />
     </>
   );
 }
